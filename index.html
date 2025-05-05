@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Monkey Type Clone - Test your typing skills! ⌨️</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <section id="game">
+    <time id="timer">0</time>
+    <p id="words"></p>
+    <input type="text" id="input" autofocus>
+  </section>
+
+  <section id="results">
+    <h2>words per minute</h2>
+    <h3 id="wpm">0</h3>
+    <button onclick="window.location.reload()">try again</button>
+  </section>
+
+  <script>
+    const $words = document.querySelector('#words')
+    const $input = document.querySelector('#input')
+    const $timer = document.querySelector('#timer')
+    const $results = document.querySelector('#results')
+    const $wpm = document.querySelector('#wpm')
+
+    const getWords = async () => {
+      const response = await fetch('https://random-word-api.herokuapp.com/word?number=60')
+      const data = await response.json()
+      return data
+    }
+
+    const state = {
+      words: [],
+      currentWordIndex: 0,
+      currentLetterIndex: 0,
+      timer: 60, // Iniciar en 60 segundos
+      intervalId: null,
+      correct: 0,
+      incorrect: 0,
+      started: false
+    }
+
+    // Mostrar el tiempo inicial
+    $timer.textContent = state.timer
+
+    $input.addEventListener('input', () => {
+      const word = state.words[state.currentWordIndex]
+      const currentLetter = word[state.currentLetterIndex]
+      const typedLetter = $input.value.at(-1)
+
+      const $currentWord = $words.children[state.currentWordIndex]
+      const $currentLetter = $currentWord.children[state.currentLetterIndex]
+
+      const isLastLetter = state.currentLetterIndex === word.length - 1
+
+      if (!state.started) {
+        state.started = true
+        state.intervalId = setInterval(() => {
+          state.timer--
+          $timer.textContent = state.timer
+
+          // Cuando el tiempo llegue a 0
+          if (state.timer <= 0) {
+            clearInterval(state.intervalId)
+            $input.disabled = true
+            $results.style.display = 'block'
+            const wpm = Math.round((state.correct / 5) / (30 / 60)) // Calcular WPM correctamente
+            $wpm.textContent = wpm
+          }
+        }, 1000)
+      }
+
+      if (typedLetter === currentLetter) {
+        $currentLetter.classList.add('correct')
+        state.correct++
+      } else {
+        $currentLetter.classList.add('incorrect')
+        $currentWord.classList.add('marked')
+        state.incorrect++
+      }
+
+      $currentLetter.classList.remove('active')
+      $currentLetter.classList.remove('is-last')
+
+      state.currentLetterIndex++
+
+      if (isLastLetter) {
+        state.currentLetterIndex = 0
+        state.currentWordIndex++
+        $input.value = ''
+      }
+
+      const nextWord = $words.children[state.currentWordIndex]
+      const nextLetter = nextWord?.children[state.currentLetterIndex]
+
+      nextLetter?.classList.add('active')
+
+      if (state.currentLetterIndex === word.length - 1) {
+        nextLetter?.classList.add('is-last')
+      }
+
+      // Verificar si se acabó el tiempo
+      if (state.timer <= 0) {
+        clearInterval(state.intervalId)
+        $input.disabled = true
+        $results.style.display = 'block'
+        const wpm = Math.round((state.correct / 5) / (30 / 60)) // Calcular WPM correctamente
+        $wpm.textContent = wpm
+      }
+    })
+
+    const renderWord = (word) => {
+      const $word = document.createElement('word')
+
+      for (const letter of word) {
+        const $letter = document.createElement('letter')
+        $letter.textContent = letter
+        $word.appendChild($letter)
+      }
+
+      return $word
+    }
+
+    getWords().then(words => {
+      state.words = words
+
+      for (const word of words) {
+        const $word = renderWord(word)
+        $words.appendChild($word)
+      }
+
+      $words.children[0].children[0].classList.add('active')
+    })
+</script>
+</body>
+</html>
